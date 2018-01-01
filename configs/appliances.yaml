@@ -1,0 +1,23 @@
+---
+# Appliances keys are :
+# 
+# - driver : napalm driver to use with the appliance
+# - port : port used by napalm for connecting to the appliance
+# 
+
+
+spine01:
+ driver: eos
+ port: 21443
+
+spine02:
+ driver: eos
+ port: 22443
+
+leaf03:
+ driver: eos
+ port: 23443
+
+leaf04:
+ driver: eos
+ port: 24443
