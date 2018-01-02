@@ -3,11 +3,6 @@ Malachite main algorithm
 """
 
 
-import click
-
-
-def main()
+def main():
     """malachite main"""
-    pass
-
-
+    print("## Running Malachite v0.1 (alpha)")
