@@ -63,7 +63,7 @@ class Loader:
             )
             print("IP addresses : %s" % ip_addresses)
 
-    def load(self, node_file):
+    def load_nodes(self, node_file):
         """Load appliances and enrich their data"""
         # Load YAML file:
         try:
@@ -76,3 +76,16 @@ class Loader:
 
         # Fetch additional data with Napalm
         self._napalm_enrich()
+
+    def load_edges(self):
+        """ After loading every node, create every possible direct link between them.
+            This steps makes use of the arp table and local ips of each node.
+        """
+
+        if not self.nodes:
+            print("Nothing to do, 0 nodes loaded...")
+            return
+
+        for node in self.nodes:
+
+
