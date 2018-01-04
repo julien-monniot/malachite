@@ -30,3 +30,13 @@ class ErrNotImplemented(MalachiteException):
 class ErrLoadingFailed(MalachiteException):
     """Appliance file loading failed at some point"""
     pass
+
+
+class ErrNodesNotLoaded(MalachiteException):
+    """Asking to compute something from nodes, but node list is empty"""
+    pass
+
+
+class ErrRedefinedIP(MalachiteException):
+    """Multiple nodes claim to have the same IP"""
+    pass

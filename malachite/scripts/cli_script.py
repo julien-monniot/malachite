@@ -6,22 +6,23 @@ import click
 
 
 @click.group(invoke_without_command=True)
-@click.option('--version', is_flag=True)
-def cli(version):
+@click.version_option()
+@click.option('--config', type=click.Path(exists=True, readable=True))
+def cli(config):
     """Entrypoint"""
     click.secho("## Malachite - CLI ##", fg='white', bg='green', bold=True)
-    if version:
-        click.secho("     Version 0.1.0", bold=True)
 
 
 @cli.command()
 @click.option('--text-output', 'text_output', is_flag=True)
-def graph(text_output):
+@click.argument('appliances', type=click.Path(exists=True, readable=True))
+def graph(text_output, appliances):
     """ Generate graph.
-
     """
 
+    click.secho('Using appliances file %s' % appliances)
+
     if text_output:
-        click.echo("## Printing edges and nodes...")
+        click.echo("Printing edges and nodes...")
     else:
-        click.echo("## Drawing graph")
+        click.echo("Drawing graph")

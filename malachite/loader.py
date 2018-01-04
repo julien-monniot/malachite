@@ -4,7 +4,10 @@
 
 import yaml
 from malachite.models.appliance import Appliance
-from malachite.utils.exceptions import ErrLoadingFailed, ErrInvalidDriver
+from malachite.utils.exceptions import ErrLoadingFailed
+from malachite.utils.exceptions import ErrInvalidDriver
+from malachite.utils.exceptions import ErrNodesNotLoaded
+from malachite.utils.exceptions import ErrRedefinedIPd
 from malachite.napalm_collector import NapalmMiddleware
 
 
@@ -50,6 +53,7 @@ class Loader:
                 raise ErrInvalidDriver('%s is not a valid driver name (%s)',
                                        node.driver, node.fqdn)
 
+            # TODO : replace username and password by parameters/configuration values.
             n_middleware.connect(
                 appliance=node,
                 username='vagrant',
@@ -57,11 +61,13 @@ class Loader:
 
             arp_table = n_middleware.get_arp_table(device_name=node.fqdn)
             print("ARP Table : %s" % arp_table)
+            nodes.ip_arp_table = arp_table
 
             ip_addresses = n_middleware.get_interfaces_ip(
                 device_name=node.fqdn
             )
             print("IP addresses : %s" % ip_addresses)
+            node.ip_local = ip_addresses
 
     def load_nodes(self, node_file):
         """Load appliances and enrich their data"""
@@ -83,9 +89,23 @@ class Loader:
         """
 
         if not self.nodes:
-            print("Nothing to do, 0 nodes loaded...")
-            return
+            raise ErrNodesNotLoaded
 
+        # Loop on every node
         for node in self.nodes:
 
+            # For each node, look-up its arp table
+            for entry in node.ip_arp_table:
 
+                eth = entry['interface']
+                ip_on_eth = entry['ip']
+
+                # We don't want to graph management links for now.
+                if 'Management' not in eth:
+                    # find dest in nodes
+                    dest = [dnode for dnode in self.nodes if node.has_ip(entry['ip'] and dnode != node)]
+                    if len(dest) > 1:
+                        raise ErrRedefinedIP
+
+                    new_link = Link(node, dest[0])
+                    link.append(new_link)
