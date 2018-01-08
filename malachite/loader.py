@@ -4,10 +4,11 @@
 
 import yaml
 from malachite.models.appliance import Appliance
+from malachite.utils.config import CONFIG
 from malachite.utils.exceptions import ErrLoadingFailed
 from malachite.utils.exceptions import ErrInvalidDriver
 from malachite.utils.exceptions import ErrNodesNotLoaded
-from malachite.utils.exceptions import ErrRedefinedIPd
+from malachite.utils.exceptions import ErrRedefinedIP
 from malachite.napalm_collector import NapalmMiddleware
 
 
@@ -22,11 +23,11 @@ class Loader:
         """ Populate internal node list from yaml file
             They will be completed later with data obtained from Napalm.
         """
-        for fqdn, settings in yaml_appliances:
-            new_appliance = Appliance(fqdn, settings['driver'])
+        for appliance in yaml_appliances:
+            new_appliance = Appliance(appliance['fqdn'], appliance['driver'])
 
-            if 'port' in settings:
-                new_appliance.port = settings['port']
+            if 'port' in appliance:
+                new_appliance.port = appliance['port']
 
             self.nodes.append(new_appliance)
 
@@ -53,15 +54,14 @@ class Loader:
                 raise ErrInvalidDriver('%s is not a valid driver name (%s)',
                                        node.driver, node.fqdn)
 
-            # TODO : replace username and password by parameters/configuration values.
             n_middleware.connect(
-                appliance=node,
-                username='vagrant',
-                password='vagrant')
+                appliance=node,  # Specific connection info (port,..) are stored in the node
+                username=CONFIG['default']['username'],
+                password=CONFIG['default']['password'])
 
             arp_table = n_middleware.get_arp_table(device_name=node.fqdn)
             print("ARP Table : %s" % arp_table)
-            nodes.ip_arp_table = arp_table
+            node.ip_arp_table = arp_table
 
             ip_addresses = n_middleware.get_interfaces_ip(
                 device_name=node.fqdn

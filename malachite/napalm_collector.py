@@ -5,7 +5,10 @@
 from napalm import get_network_driver
 from napalm.base.exceptions import ModuleImportError, ConnectionException
 
-from malachite.exceptions import ErrInvalidDriver, ErrConnectionFailed, ErrNotImplemented
+from malachite.models.appliance import Appliance
+from malachite.utils.exceptions import ErrInvalidDriver
+from malachite.utils.exceptions import ErrNotImplemented
+from malachite.utils.exceptions import ErrConnectionFailed
 
 
 class NapalmMiddleware:
@@ -24,7 +27,7 @@ class NapalmMiddleware:
     def _open_connection(self, appliance, login=None):
         """Open conenction to a device"""
 
-        assert(isinstance(appliance, malachite.model.Appliance))
+        assert(isinstance(appliance, Appliance))
 
         # Set optional arguments if needed :
         opt_args = {}
@@ -38,9 +41,16 @@ class NapalmMiddleware:
         else:
             raise ErrNotImplemented('Login field must be non-empty')
 
+        # Debug
+        print("Connecting to : ")
+        print("hostname : %s" % appliance.fqdn)
+        print("on port %s" % appliance.port)
+        print("with creds : %s/%s" % (username, password))
+        print("and opt args : %s" % opt_args)
+
         # Create napalm device
         device = self.driver(
-            hostname=appliance.fqdn,
+            hostname="127.0.0.1",  #  local test, but should be 'appliance.fqdn',
             username=username,
             password=password,
             optional_args=opt_args
@@ -106,7 +116,7 @@ class NapalmMiddleware:
         arp_tables = {}
 
         if device_name and device_name in self.devices:
-            arp_table[device_name] = self.devices[device_name].get_arp_table()
+            arp_tables[device_name] = self.devices[device_name].get_arp_table()
             return arp_tables
 
         for name, device in self.devices.items():
@@ -122,7 +132,7 @@ class NapalmMiddleware:
         if device_name and device_name in self.devices:
             interfaces_ip[device_name] = self.devices[device_name].get_interfaces_ip()
 
-        for name, device in devices.items():
-            interfaces_ip[name] = device[name].get_interfaces_ip()
+        for name, device in self.devices.items():
+            interfaces_ip[name] = device.get_interfaces_ip()
 
         return interfaces_ip

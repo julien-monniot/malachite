@@ -48,7 +48,6 @@ class Malachite:
 
         self.load_appliances()
         self.load_edges()
-        self.
 
     def draw_graph(self):
         """Draw 3D graph with plotly"""

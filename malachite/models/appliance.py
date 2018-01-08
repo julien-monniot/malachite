@@ -7,7 +7,7 @@
 
 from ipaddress import ip_address
 from collections import OrderedDict
-from malachite.utils.exceptions import ErrInvalidDriver
+# from malachite.utils.exceptions import ErrInvalidDriver
 
 
 class Appliance:
@@ -20,7 +20,7 @@ class Appliance:
         self.fqdn = fqdn
 
         # Napalm settings
-        self.driver = ErrInvalidDriver
+        self.driver = driver
         self.port = 0
 
         # List of IP addresses configured on appliance and ip arp table
