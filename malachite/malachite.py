@@ -34,7 +34,7 @@ class Malachite:
         self.loader.load_nodes(self.appliances_file)
 
     def load_edges(self):
-        """Tell the laoder to build and store edge list from node list"""
+        """Tell the loader to build and store edge list from node list"""
 
         if not self.loader:
             raise ErrNodesNotLoaded

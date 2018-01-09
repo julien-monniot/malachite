@@ -16,3 +16,13 @@ class Link:
         self.source = source
         self.destination = destination
         self.bidirectionnal = False
+
+    def __str__(self):
+        """Edge description"""
+
+        desc = "Link from %s to %s" % (
+            self.source.name,
+            self.destination.name
+        )
+
+        return desc

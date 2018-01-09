@@ -3,7 +3,12 @@
 """
 
 import yaml
+
+from ipaddress import ip_address
+
 from malachite.models.appliance import Appliance
+from malachite.models.link import Link
+
 from malachite.utils.config import CONFIG
 from malachite.utils.exceptions import ErrLoadingFailed
 from malachite.utils.exceptions import ErrInvalidDriver
@@ -17,6 +22,7 @@ class Loader:
     def __init__(self):
         self.nodes = []
         self.edges = []
+        self.missing_neighbor = []
         self.middlewares = {}
 
     def _build_nodes(self, yaml_appliances):
@@ -24,7 +30,11 @@ class Loader:
             They will be completed later with data obtained from Napalm.
         """
         for appliance in yaml_appliances:
-            new_appliance = Appliance(appliance['fqdn'], appliance['driver'])
+            new_appliance = Appliance(
+                appliance['fqdn'],
+                appliance['driver'],
+                appliance['name']
+            )
 
             if 'port' in appliance:
                 new_appliance.port = appliance['port']
@@ -54,20 +64,26 @@ class Loader:
                 raise ErrInvalidDriver('%s is not a valid driver name (%s)',
                                        node.driver, node.fqdn)
 
+            # Specific connection info (port,..) are stored in the node
             n_middleware.connect(
-                appliance=node,  # Specific connection info (port,..) are stored in the node
+                appliance=node,
                 username=CONFIG['default']['username'],
                 password=CONFIG['default']['password'])
 
+            # ARP table at current time
             arp_table = n_middleware.get_arp_table(device_name=node.fqdn)
-            print("ARP Table : %s" % arp_table)
-            node.ip_arp_table = arp_table
+            node.ip_arp_table = {
+                entry['interface']: ip_address(entry['ip']) for entry in arp_table
+            }
 
+            # Ip address locally set
             ip_addresses = n_middleware.get_interfaces_ip(
                 device_name=node.fqdn
             )
-            print("IP addresses : %s" % ip_addresses)
-            node.ip_local = ip_addresses
+            for interface, entry_data in ip_addresses.items():
+                ipv4 = entry_data['ipv4']
+                for ip in ipv4.keys():
+                    node.ip_local[ip_address(ip)] = interface
 
     def load_nodes(self, node_file):
         """Load appliances and enrich their data"""
@@ -95,17 +111,22 @@ class Loader:
         for node in self.nodes:
 
             # For each node, look-up its arp table
-            for entry in node.ip_arp_table:
-
-                eth = entry['interface']
-                ip_on_eth = entry['ip']
+            for eth, ip in node.ip_arp_table.items():
 
                 # We don't want to graph management links for now.
                 if 'Management' not in eth:
+
                     # find dest in nodes
-                    dest = [dnode for dnode in self.nodes if node.has_ip(entry['ip'] and dnode != node)]
+                    dest = [dnode for dnode in self.nodes if node.has_ip(ip)
+                            and dnode != node]
+
                     if len(dest) > 1:
                         raise ErrRedefinedIP
 
-                    new_link = Link(node, dest[0])
-                    link.append(new_link)
+                    if not dest:
+                        # debug
+                        print("No matching ip found for %s" % ip)
+                        self.missing_neighbor.append((node, ip))
+                    else:
+                        new_link = Link(node, dest[0])
+                        self.edges.append(new_link)

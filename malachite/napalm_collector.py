@@ -42,15 +42,17 @@ class NapalmMiddleware:
             raise ErrNotImplemented('Login field must be non-empty')
 
         # Debug
+        '''
         print("Connecting to : ")
         print("hostname : %s" % appliance.fqdn)
         print("on port %s" % appliance.port)
         print("with creds : %s/%s" % (username, password))
         print("and opt args : %s" % opt_args)
+        '''
 
         # Create napalm device
         device = self.driver(
-            hostname="127.0.0.1",  #  local test, but should be 'appliance.fqdn',
+            hostname="127.0.0.1",  # local test, but should be 'appliance.fqdn'
             username=username,
             password=password,
             optional_args=opt_args
@@ -117,7 +119,7 @@ class NapalmMiddleware:
 
         if device_name and device_name in self.devices:
             arp_tables[device_name] = self.devices[device_name].get_arp_table()
-            return arp_tables
+            return arp_tables[device_name]
 
         for name, device in self.devices.items():
             arp_table[name] = device.get_arp_table()
@@ -131,6 +133,7 @@ class NapalmMiddleware:
 
         if device_name and device_name in self.devices:
             interfaces_ip[device_name] = self.devices[device_name].get_interfaces_ip()
+            return interfaces_ip[device_name]
 
         for name, device in self.devices.items():
             interfaces_ip[name] = device.get_interfaces_ip()
