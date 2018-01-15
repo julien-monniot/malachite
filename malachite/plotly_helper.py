@@ -71,8 +71,9 @@ class PlotlyHelper:
             y=coord[1],
             z=coord[2],
             mode='lines',
-            line=Line(color='rgb(125,125,125)', width=1),
-            hoverinfo=[e.__str__() for e in edges]
+            line=Line(color='rgb(125,125,125)', width=3),
+            hoverinfo=[e.__str__() for e in edges],
+            text=[e.__str__() for e in edges]
         )
 
         self.edge_scatters[scatter_name] = edge_scatter
@@ -84,9 +85,9 @@ class PlotlyHelper:
 
         axis = dict(
             showbackground=False,
-            showline=True,
-            zeroline=True,
-            showgrid=True,
+            showline=False,
+            zeroline=False,
+            showgrid=False,
             showticklabels=False,
             title=titles
         )
