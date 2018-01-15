@@ -1,8 +1,8 @@
-"""
-Malachite main algorithm
+""" Malachite main algorithm
 """
 
 from malachite.loader import Loader
+from malachite.plotly_helper import PlotlyHelper
 from malachite.utils.config import CONFIG
 from malachite.utils.exceptions import ErrNodesNotLoaded
 
@@ -39,16 +39,23 @@ class Malachite:
         if not self.loader:
             raise ErrNodesNotLoaded
 
-        self.loader.load_edges()
+        self.loader.build_edges()
 
-    def generate_graph(self, appliances_file):
-        """ Turn the data contained in our models into an igraph,
-            ready for drawing
-        """
+    def build_coordinates(self):
+        """Set node coordinates from igraph"""
+        self.loader.build_coordinates()
 
-        self.load_appliances()
-        self.load_edges()
-
-    def draw_graph(self):
+    def plot(self, filename="graph.html"):
         """Draw 3D graph with plotly"""
-        pass
+
+        # Init with main node list (our appliances)
+        plotlyhelper = PlotlyHelper(self.loader.nodes)
+
+        # Add edges as a new scatter
+        plotlyhelper.build_edge_scatter(
+            self.loader.edges,
+            "L3 direct connections",
+        )
+
+        # Plot graph (node scatter + any edge scatter added before this call)
+        plotlyhelper.plot(filename)
