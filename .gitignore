@@ -97,5 +97,11 @@ ENV/
 # mkdocs documentation
 /site
 
+# npm stuffs (Front end)
+/node_modules
+
 # mypy
 .mypy_cache/
+
+# html file containing graph
+.html

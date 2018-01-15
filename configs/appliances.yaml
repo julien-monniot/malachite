@@ -1,0 +1,26 @@
+---
+# List of appliances for PoC (these are from the vragrant file
+# included in this directory)
+# 
+# - fqdn : fqdn (or ip address) for the appliance 
+# - driver : napalm driver to use with the appliance
+# - port : port used by napalm for connecting to the appliance
+# - name : common (unique) name of appliance - can be the same as fqdn
+
+
+- fqdn: 127.0.0.1 
+  name: spine01
+  driver: eos
+  port: 21443
+- fqdn: 127.0.0.1
+  name: spine02
+  driver: eos
+  port: 22443
+- fqdn: 127.0.0.1
+  name: leaf03
+  driver: eos
+  port: 23443
+- fqdn: 127.0.0.1
+  name: leaf04
+  driver: eos
+  port: 24443
