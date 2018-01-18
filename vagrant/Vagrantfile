@@ -72,8 +72,23 @@ Vagrant.configure(2) do |config|
       sleep 30
       FastCli -p 15 -c "configure
       hostname spine01
+      ip routing
       interface Management1
-        ip address 192.168.56.101/24 secondary"
+        ip address 192.168.56.101/24 secondary
+      interface Ethernet1
+        no switchport
+        ip address 10.10.2.1/30
+      interface Ethernet2
+        no switchport
+        ip address 10.10.5.2/30
+      interface Ethernet3
+        no switchport
+        ip address 10.10.1.1/30
+      router bgp 10
+        neighbor 10.10.0.2 remote-as 10
+        neighbor 10.10.0.2 maximum-routes 12000 
+        neighbor 10.10.2.2 remote-as 20
+        neighbor 10.10.2.2 maximum-routes 12000"
     SHELL
   end
 
@@ -95,8 +110,26 @@ Vagrant.configure(2) do |config|
       sleep 30
       FastCli -p 15 -c "configure
       hostname spine02
+      ip routing
       interface Management1
-        ip address 192.168.56.102/24 secondary"
+        ip address 192.168.56.102/24 secondary
+      interface Ethernet1
+        no switchport
+        ip address 10.10.4.1/30
+      interface Ethernet2
+        no switchport
+        ip address 10.10.3.1/30
+      interface Ethernet3
+        no switchport
+        ip address 10.10.1.2/30
+      interface Management1
+        ip address 10.0.2.15/24
+        ip address 192.168.56.102/24 secondary
+      router bgp 10
+        neighbor 10.10.0.1 remote-as 10
+        neighbor 10.10.0.1 maximum-routes 12000 
+        neighbor 10.10.4.2 remote-as 20
+        neighbor 10.10.4.2 maximum-routes 12000"
     SHELL
   end
   
@@ -118,8 +151,28 @@ Vagrant.configure(2) do |config|
       sleep 30
       FastCli -p 15 -c "configure
       hostname leaf03
+      ip routing
       interface Management1
-        ip address 192.168.56.101/24 secondary"
+        ip address 192.168.56.101/24 secondary
+      interface Ethernet1
+        no switchport
+        ip address 10.10.2.2/30
+      interface Ethernet2
+        no switchport
+        ip address 10.10.4.2/30
+      interface Ethernet3
+        no switchport
+        ip address 10.10.6.1/30
+      interface Loopback1
+        ip address 172.22.0.1/16
+      router bgp 20
+         neighbor 10.10.2.1 remote-as 10
+         neighbor 10.10.2.1 maximum-routes 12000
+         neighbor 10.10.4.1 remote-as 10
+         neighbor 10.10.4.1 maximum-routes 12000
+         address-family ipv4
+            neighbor 10.10.2.1 activate
+            network 172.22.0.0/16"
     SHELL
   end
 
@@ -141,8 +194,18 @@ Vagrant.configure(2) do |config|
       sleep 30
       FastCli -p 15 -c "configure
       hostname leaf04
+      ip routing
       interface Management1
-        ip address 192.168.56.102/24 secondary"
+        ip address 192.168.56.102/24 secondary
+      interface Ethernet1
+        no switchport
+        ip address 10.10.5.1/30
+      interface Ethernet2
+        no switchport
+        ip address 10.10.3.2/30
+      interface Ethernet3
+        no switchport
+        ip address 10.10.6.2/30"
     SHELL
   end
 end

@@ -105,3 +105,5 @@ ENV/
 
 # html file containing graph
 .html
+
+.vagrant

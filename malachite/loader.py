@@ -1,5 +1,22 @@
-""" Load appliance list, enrich our data with napalm and get everything
-    ploty-ready !
+""" Messy mix of temorary nodes/edges storage and functions for
+    creating those objects.
+
+    It exposes three steps of the graphing process:
+    -   load_nodes : reads from a list of appliances and gather data about them
+        (from config files and with the help of Napalm). This is the step
+        responsible for both 'appliances' AND 'nodes' creation, although nodes
+        are not ready for use rigth away. Each node encapsulates a single
+        appliance.
+    -   build_edges : uses data from appliances in order to define the link
+        between them. Those links are stored as "Edge"(s) objects, which
+        refer to a source and a destination 'node' object.
+    -   use iGraph in order to generate a fitting layout for our set of edges.
+        Coordinates of each node are stored in the corresponding 'node' object.
+
+    These three steps must be invoked in that order before plotting.
+
+    Maybe this class does too much things, but for now, it seems useless to
+    decouple its tasks.
 """
 
 import yaml
@@ -11,44 +28,78 @@ from malachite.models.appliance import Appliance
 from malachite.models.node import Node
 from malachite.models.edge import Edge
 
-from malachite.utils.config import CONFIG
-from malachite.utils.exceptions import ErrLoadingFailed
-from malachite.utils.exceptions import ErrInvalidDriver
-from malachite.utils.exceptions import ErrNodesNotLoaded
-from malachite.utils.exceptions import ErrRedefinedIP
 from malachite.napalm_collector import NapalmMiddleware
+
+from malachite.utils.config import CONFIG
+from malachite.utils.exceptions import (
+    ErrLoadingFailed,
+    ErrInvalidDriver,
+    ErrNodesNotLoaded,
+    ErrRedefinedIP
+)
 
 
 class Loader:
 
     def __init__(self):
         """ Init loader class.
-
             Currently, it acts as a temporary storage class
             for every objects needed during the graphin process
             (nodes, edges, igraph and layout, etc).
-
             In further devs, it might rely on some DB middleware
             for added persistence.
         """
-        self.node_uid = 0       # Unique node id, will become useless with db
-        self.appliances = []    # List of network appliances
-        self.nodes = []         # List of graph nodes
-        self.edges = []         # List of computed edges, each one refs 2 nodes
+        # List of network appliances (containing data gathered with Napalm)
+        self.appliances = []
+
+        # Unique node id, will become useless with db
+        self.node_uid = 0
+
+        # List of graph nodes (coordinates, uid...)
+        self.nodes = []
+
+        # List of computed edges, each one refs 2 nodes
+        self.edges = []
+
         self.missing_neighbor = []  # See 'build_edges'
-        self.middlewares = {}   # napalm middlewares for != types of appliances
+
+        # napalm middlewares (see how napalm_collector works for more details.
+        self.middlewares = {}
 
     def _get_uid(self):
         """ Return next available uid (which is basically a node counter)
             and increment the value for next call.
+
+            :return: First available UID value.
+            :rtype: int
         """
         ret = self.node_uid
         self.node_uid += 1
         return ret
 
-    def _build_nodes(self, yaml_appliances):
-        """ Populate internal node list from yaml file
+    def _get_middleware(self, driver):
+        """ Return a local Napalm middleware or create one
+            for given driver, if necessary.
+
+            :params str driver: Name of the Napalm driver needed.
+            :return: Napalm middleware configured with correct driver.
+            :rtype: napalm.driver
+        """
+        if driver in self.middlewares:
+            return self.middlewares[driver]
+        else:
+            new_middleware = NapalmMiddleware(driver)
+            self.middlewares[driver] = new_middleware
+            return new_middleware
+
+    def _build_appliances(self, yaml_appliances):
+        """ Populate internal appliance list from yaml file.
             They will be completed later with data obtained from Napalm.
+            In the same fashion, alos create nodes that encapsulate every
+            appliance, and will also be completed later.
+
+            :params dict yaml_appliances: List of appliances read from a
+                                          yaml file.
         """
         for appliance in yaml_appliances:
             new_appliance = Appliance(
@@ -63,21 +114,13 @@ class Loader:
             self.appliances.append(new_appliance)
             self.nodes.append(Node(self._get_uid(), new_appliance))
 
-    def _get_middleware(self, driver):
-        """ Return a local Napalm middleware or create one
-            for given driver, if necessary.
-        """
-
-        if driver in self.middlewares:
-            return self.middlewares[driver]
-        else:
-            new_middleware = NapalmMiddleware(driver)
-            self.middlewares[driver] = new_middleware
-            return new_middleware
-
     def _napalm_enrich(self):
-        """Enrich node data with napalm"""
+        """ Enrich appliance data with napalm
 
+            Currently :
+            - get arp table
+            - get locally set up IPv4 (from every routed int)
+        """
         for appliance in self.appliances:
 
             try:
@@ -109,49 +152,50 @@ class Loader:
                     appliance.ip_local[ip_address(ip)] = interface
 
     def load_nodes(self, node_file):
-        """Load appliances and enrich their data"""
-        # Load YAML file:
+        """ Load appliances from file, build corresponding nodes
+            and gather additional data using a NapalmMiddleware.
+
+            :params str node_file: Filename of yaml containing the
+                                   appliance list
+        """
         try:
             with open(node_file, 'r') as n_file:
                 appliances = yaml.load(n_file)
         except FileNotFoundError:
-            raise ErrLoadingFailed('File not found')
+            raise ErrLoadingFailed('File %s not found' % node_file)
         else:
-            self._build_nodes(appliances)
+            self._build_appliances(appliances)
 
-        # Fetch additional data with Napalm
         self._napalm_enrich()
 
     def build_edges(self):
-        """ After loading every node, create every possible direct link between them.
-            This steps makes use of the arp table and local ips of each node.
+        """ After loading every appliance/node, create every possible direct
+            link between them (making use of the arp table and local IPv4 of
+            each appliance)
         """
-
         if not self.nodes:
-            raise ErrNodesNotLoaded
+            raise ErrNodesNotLoaded(
+                'Call "load_nodes()" or make sure appliance file is not empty'
+            )
 
-        # Loop on every node
         for node in self.nodes:
-
+            # Shortcut to the appliance inside the node (contains network data)
             app = node.appliance
-
-            # For each node, look-up its arp table
             for eth, ip in app.ip_arp_table.items():
-
-                # We don't want to graph management links for now.
+                # We don't want to graph management links for now
+                # TODO: needs to be replaced with a generic regex (Mgt/mgmt/..)
                 if 'Management' not in eth:
 
-                    # find dest in nodes
-                    dest = [dnode
-                            for dnode in self.nodes
+                    dest = [dnode for dnode in self.nodes
                             if dnode.appliance.has_ip(ip) and dnode != node]
 
                     if len(dest) > 1:
-                        raise ErrRedefinedIP
+                        raise ErrRedefinedIP(
+                            "Nodes %s all have an IP %s" % (dest, ip)
+                        )
 
                     if not dest:
-                        # debug
-                        print("No matching ip found for %s" % ip)
+                        # TODO: we don't use 'missing_neighbors' yet...
                         self.missing_neighbor.append((node, ip))
                     else:
                         self.edges.append(Edge(node, dest[0]))
@@ -167,6 +211,8 @@ class Loader:
             sets of edges
         """
 
+        # Create a list of tuples with node indexes instead of the
+        # full objects (so that we can feed it to iGraph)
         edge_idx = [
             e.to_indexes()
             for e in self.edges

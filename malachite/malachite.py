@@ -1,4 +1,7 @@
 """ Malachite main algorithm
+
+    Still in a messed up state (CLI has to know the algorithm)
+    but not for long.
 """
 
 from malachite.loader import Loader
@@ -12,7 +15,7 @@ class Malachite:
         Basically wraps Loader and templates graph creation.
     """
 
-    def __init__(self, config_file=None, appliances_file=None):
+    def __init__(self, config_file=None, app_file=None, graph_file=None):
         """Create a few empty objects that will be initialized later."""
 
         # Malachite loader
@@ -22,8 +25,10 @@ class Malachite:
         # config file some day.
         self.config = config_file
 
-        if appliances_file:
-            self.appliances_file = appliances_file
+        self.graph_file = graph_file
+
+        if app_file:
+            self.appliances_file = app_file
         else:
             self.appliances_file = CONFIG['default']['appliances_file']
 
@@ -45,7 +50,7 @@ class Malachite:
         """Set node coordinates from igraph"""
         self.loader.build_coordinates()
 
-    def plot(self, filename="graph.html"):
+    def plot(self):
         """Draw 3D graph with plotly"""
 
         # Init with main node list (our appliances)
@@ -58,4 +63,17 @@ class Malachite:
         )
 
         # Plot graph (node scatter + any edge scatter added before this call)
-        plotlyhelper.plot(filename)
+        if not self.graph_file:
+            self.graph_file = self.config['default']['graph_file']
+        plotlyhelper.plot(self.graph_file)
+
+    def algorithm(self):
+        """ Full plotting algorithm
+        """
+        # TODO: yield status/objects __str__ after completion of each step so
+        # that CLI can use this function directly instead of calling every
+        # sub functions.
+        self.load_appliances()
+        self.load_edges()
+        self.build_coordinates()
+        self.plot()

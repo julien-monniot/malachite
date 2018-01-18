@@ -20,6 +20,8 @@ def cli(config):
 @click.argument('appliances', type=click.Path(exists=True, readable=True))
 def graph(output_file, appliances, conf, verbose):
     """ Generate graph.
+
+        TODO : use the malachite.algorithm() method instead, once it's ready.
     """
 
     # Malachite init with correct appliance file.
